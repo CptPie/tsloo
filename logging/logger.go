@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"fmt"
 	"os"
 
 	clog "github.com/charmbracelet/log"
@@ -26,8 +27,8 @@ func New(logfile os.File) *Logger {
 
 func (l Logger) Debug(s string, v ...interface{}) {
 	if len(v) != 0 {
-		l.consoleLogger.Debugf(s, v)
-		l.fileLogger.Debugf(s, v)
+		l.consoleLogger.Debug(fmt.Sprintf(s, v...))
+		l.fileLogger.Debug(fmt.Sprintf(s, v...))
 	} else {
 		l.consoleLogger.Debug(s)
 		l.fileLogger.Debug(s)
@@ -36,8 +37,8 @@ func (l Logger) Debug(s string, v ...interface{}) {
 
 func (l Logger) Info(s string, v ...interface{}) {
 	if len(v) != 0 {
-		l.consoleLogger.Info(s, v)
-		l.fileLogger.Info(s, v)
+		l.consoleLogger.Info(fmt.Sprintf(s, v...))
+		l.fileLogger.Info(fmt.Sprintf(s, v...))
 	} else {
 		l.consoleLogger.Info(s)
 		l.fileLogger.Info(s)
@@ -46,8 +47,8 @@ func (l Logger) Info(s string, v ...interface{}) {
 
 func (l Logger) Warn(s string, v ...interface{}) {
 	if len(v) != 0 {
-		l.consoleLogger.Warn(s, v)
-		l.fileLogger.Warn(s, v)
+		l.consoleLogger.Warn(fmt.Sprintf(s, v...))
+		l.fileLogger.Warn(fmt.Sprintf(s, v...))
 	} else {
 		l.consoleLogger.Warn(s)
 		l.fileLogger.Warn(s)
@@ -56,8 +57,8 @@ func (l Logger) Warn(s string, v ...interface{}) {
 
 func (l Logger) Error(s string, v ...interface{}) {
 	if len(v) != 0 {
-		l.consoleLogger.Error(s, v)
-		l.fileLogger.Error(s, v)
+		l.consoleLogger.Error(fmt.Sprintf(s, v...))
+		l.fileLogger.Error(fmt.Sprintf(s, v...))
 	} else {
 		l.consoleLogger.Error(s)
 		l.fileLogger.Error(s)
