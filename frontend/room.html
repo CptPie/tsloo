@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronized Playback</title>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        #controls {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <button id="toggleMode">Switch to MP3 Player</button>
+    </div>
+
+    <div id="youtubePlayer"></div>
+    <audio id="audioPlayer" controls style="display: none;"></audio>
+
+
+    <script>
+        let socket = new WebSocket("ws://" + window.location.host +"/{{ .Id }}"+ "/ws");
+        let player;
+        let currentMode = "youtube";
+        let playerReady = false;
+        const audioPlayer = document.getElementById("audioPlayer");
+        let isSynced = false;
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtubePlayer', {
+                height: '390',
+                width: '640',
+                videoId: '',
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            playerReady = true;
+            console.log("YouTube Player is ready!");
+          player.loadVideoById("{{ .Youtube }}");
+          audioPlayer.src = "{{ .AudioFile }}"; // Replace with actual URL
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
+                const state = {
+                    state: event.data === YT.PlayerState.PLAYING ? "playing" : "paused",
+                    time: player.getCurrentTime(),
+                    mode: currentMode
+                };
+                socket.send(JSON.stringify(state));
+            }
+        }
+
+        function publishAudioState(state) {
+            const audioState = {
+                state: state,
+                time: audioPlayer.currentTime,
+                mode: "mp3"
+            };
+            msg = JSON.stringify(audioState)
+            socket.send(msg);
+            console.log("WS send: "+msg)
+            isSynced = true;
+          } 
+
+        audioPlayer.addEventListener("play", () => publishAudioState("playing"));
+        audioPlayer.addEventListener("pause", () => publishAudioState("paused"));
+
+
+        socket.onopen = () => {
+            console.log("WebSocket connection established.");
+        };
+
+        socket.onmessage = (event) => {
+          console.log("WS MSG received: "+event.data);
+          const data = JSON.parse(event.data);
+
+          if (currentMode != data.mode) {
+            if (data.mode == "youtube") {
+                // change the state
+                currentMode = "youtube";
+                audioPlayer.pause();
+                isSynced = false;
+
+                // change the display
+                audioPlayer.style.display = "none";
+                document.getElementById("youtubePlayer").style.display = "block";
+                document.getElementById("toggleMode").innerText = "Switch to MP3 Player";
+            } else {
+                // change the state
+                currentMode = "mp3";
+                player.stopVideo();
+                isSynced = false;
+
+                // change the display
+                audioPlayer.style.display = "block";
+                document.getElementById("youtubePlayer").style.display = "none";
+                document.getElementById("toggleMode").innerText = "Switch to YouTube Player";
+            }
+          }
+
+          if (currentMode === "youtube" && playerReady) {
+            if (data.state === "playing") {
+                if (!isSynced) {
+                  player.seekTo(data.time, true);
+                  isSynced = true;
+                }
+                player.playVideo();
+            } else {
+                player.seekTo(data.time, true);
+                player.pauseVideo();
+            }
+          } else if (currentMode === "mp3") {
+            audioPlayer.currentTime = data.time;
+            if (data.state === "playing") {
+                if (!isSynced) {
+                  audioPlayer.currentTime = data.time;
+                  isSynced = true
+                }
+                audioPlayer.play();
+            } else {
+                audioPlayer.pause();
+            }
+          }
+        };
+
+        document.getElementById("toggleMode").addEventListener("click", () => {
+            if (currentMode === "youtube") {
+                // change the state
+                currentMode = "mp3";
+                player.stopVideo();
+                isSynced = false;
+
+                // change the display
+                audioPlayer.style.display = "block";
+                document.getElementById("youtubePlayer").style.display = "none";
+                document.getElementById("toggleMode").innerText = "Switch to YouTube Player";
+
+                // publish the state change
+                msg = JSON.stringify(
+                  {
+                      state: "paused",
+                      time:  player.getCurrentTime(),
+                      mode:  "mp3"
+                  })
+                socket.send(msg)
+                console.log("WS send: "+msg)
+            } else {
+                // change the state
+                currentMode = "youtube";
+                audioPlayer.pause();
+                isSynced = false;
+
+                // change the display
+                audioPlayer.style.display = "none";
+                document.getElementById("youtubePlayer").style.display = "block";
+                document.getElementById("toggleMode").innerText = "Switch to MP3 Player";
+
+                // publish the change
+                msg =JSON.stringify(
+                  {
+                      state:  "paused",
+                      time:  audioPlayer.currentTime,
+                      mode:  "youtube"
+                  })
+                socket.send(msg)
+                console.log("WS send: "+msg)
+            }
+        });
+    </script>
+</body>
+</html>

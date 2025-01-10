@@ -4,6 +4,8 @@ import (
 	"os"
 
 	clog "github.com/charmbracelet/log"
+	"github.com/cptpie/tsloo/backend"
+	database "github.com/cptpie/tsloo/data"
 	"github.com/cptpie/tsloo/logging"
 )
 
@@ -21,15 +23,16 @@ func main() {
 	}
 
 	log := logging.New(*logFile)
-	log.Warn("hello world!")
 
-	// var db string
-	// db, err := database.GetDatabase()
+	db, err := database.GetDB()
 	if err != nil {
 		log.Error("Could not open database connection: %v", err.Error())
 		os.Exit(1)
 	}
 
-	// var backend string
-	// backend, err := backend.New(db, log)
+	_, err = backend.New(db, log)
+	if err != nil {
+		log.Error("%v", err)
+		os.Exit(1)
+	}
 }
